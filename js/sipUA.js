@@ -131,10 +131,7 @@ window.phone = {
 		console.log('Audio/Video Call : '+typeof video + video);
 		if(UA.isRegistered()) {
 			if(!isEmpty(number)) {
-				if(arraySize(_sessions) > 0) {
-					notify("Maximum Call Limit Reached");
-					return;
-				}
+				
 				_session = UA.invite(number, { 
 				sessionDescriptionHandlerOptions : {
 	        		constraints: { audio: true, video : (String(video) == "true")},
@@ -187,14 +184,6 @@ window.session = {
 		const callDirection = (_session.accept) ? 'incoming' : 'outgoing';
 		const displayName = (_session && _session.remoteIdentity.displayName) || _session.remoteIdentity.uri.user;
 		const _callerNumber = _session.remoteIdentity.uri.user;
-
-		if(callDirection == 'incoming') {
-			if(arraySize(_sessions) > 1) {
-				_session.reject();
-				console.error("Maximum Call Limit Reached");
-				return;
-			}
-		}
 
 		if(callDirection == 'incoming') {
 			soundPlayer.setAttribute("src", "assets/sounds/play_file.ogg");
