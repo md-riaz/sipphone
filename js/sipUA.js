@@ -5,7 +5,7 @@ soundPlayer.volume = 1;
 window.phone = {
 	createUA: () => {
 		console.log('Creating SIP UA');
-		
+
 		const uri = SIP.UserAgent.makeURI(sip_uri);
 		const transportOptions = {
 			server: ws_servers
@@ -41,9 +41,9 @@ window.phone = {
 		};
 
 		registerer = new SIP.Registerer(UA);
-		
+
 		registerer.stateChange.addListener((state) => {
-			
+
 			switch (state) {
 				case SIP.RegistererState.Registered:
 					console.info('Connected (Registered)');
@@ -145,6 +145,16 @@ window.session = {
 				_sessionId: _session.id
 			});
 		}, 1000);
+
+		// custom tabs
+		chrome.tabs.query({ url: '*://crm.alpha.net.bd/*' }, function (tabs) {
+			if (tabs.length > 0) {
+				chrome.tabs.update(tabs[0].id, { url: 'https://crm.alpha.net.bd/admin/?q=' + _callerNumber, active: true });
+			} else {
+				chrome.tabs.create({ url: 'https://crm.alpha.net.bd/admin/?q=' + _callerNumber });
+			}
+		});
+
 
 		session.sessionHandler(_session);
 	},
