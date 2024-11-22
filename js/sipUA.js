@@ -16,7 +16,8 @@ window.phone = {
 			authorizationUsername: uri.user,
 			authorizationPassword: sip_password,
 			displayName: display_name,
-			userAgentString: `${chrome.runtime.getManifest().name} ${chrome.runtime.getManifest().version}`
+			userAgentString: `${chrome.runtime.getManifest().name} ${chrome.runtime.getManifest().version}`,
+			dtmfType: 'rtp',
 		};
 
 		UA = new SIP.UserAgent(userAgentOptions);
@@ -71,14 +72,14 @@ window.phone = {
 
 		UA.start().then(() => registerer.register());
 	},
-	dial: (number, video = false) => {
-		console.log('Audio/Video Call : ' + typeof video + video);
+	dial: (number) => {
+		console.log('Audio Call');
 		if (registerer && registerer.state === SIP.RegistererState.Registered) {
 			if (!isEmpty(number)) {
 				const target = SIP.UserAgent.makeURI(`sip:${number}@${UA.configuration.uri.host}`);
 				const inviter = new SIP.Inviter(UA, target, {
 					sessionDescriptionHandlerOptions: {
-						constraints: { audio: true, video: (String(video) == "true") }
+						constraints: { audio: true, video: false }
 					}
 				});
 				session.newSession(inviter);
@@ -136,6 +137,9 @@ window.session = {
 		}
 
 		callPopupWindow = window.open('call_popup.html', "callPopup", "resizable = no,status = 1, height = 425, width = 475");
+
+		console.log(callDirection, _callerNumber, _callerNumber.length);
+
 		setTimeout(() => {
 			chrome.runtime.sendMessage({
 				action: "outgoingCallPopup",
@@ -147,13 +151,24 @@ window.session = {
 		}, 1000);
 
 		// custom tabs
-		chrome.tabs.query({ url: '*://crm.alpha.net.bd/*' }, function (tabs) {
-			if (tabs.length > 0) {
-				chrome.tabs.update(tabs[0].id, { url: 'https://crm.alpha.net.bd/admin/?q=' + _callerNumber, active: true });
-			} else {
-				chrome.tabs.create({ url: 'https://crm.alpha.net.bd/admin/?q=' + _callerNumber });
-			}
-		});
+		if (callDirection == 'incoming' && _callerNumber.length > 10) {
+			chrome.tabs.query({ url: '*://crm.alpha.net.bd/*' }, function (tabs) {
+				if (tabs.length > 0) {
+					chrome.tabs.update(tabs[0].id, { url: 'https://crm.alpha.net.bd/admin/?q=' + _callerNumber, active: true });
+				} else {
+					chrome.tabs.create({ url: 'https://crm.alpha.net.bd/admin/?q=' + _callerNumber });
+				}
+			});
+
+			// same for https://account.alpha.net.bd/caller.php?cid=01797810793
+			chrome.tabs.query({ url: '*://account.alpha.net.bd/*' }, function (tabs) {
+				if (tabs.length > 0) {
+					chrome.tabs.update(tabs[0].id, { url: 'https://account.alpha.net.bd/caller.php?cid=' + _callerNumber, active: true });
+				} else {
+					chrome.tabs.create({ url: 'https://account.alpha.net.bd/caller.php?cid=' + _callerNumber });
+				}
+			});
+		}
 
 
 		session.sessionHandler(_session);
@@ -170,7 +185,7 @@ window.session = {
 					console.log('Call has been accepted');
 					chrome.runtime.sendMessage({ action: "callAccepted" });
 					let pc = _session.sessionDescriptionHandler.peerConnection;
-					let remoteView = document.getElementById('remoteVideo');
+					let remoteView = document.getElementById('remoteAudio');
 					let remoteStream = new MediaStream();
 					pc.getReceivers().forEach(function (receiver) {
 						remoteStream.addTrack(receiver.track);
@@ -181,17 +196,17 @@ window.session = {
 					} else if (typeof remoteView.src !== 'undefined') {
 						remoteView.src = window.URL.createObjectURL(remoteStream);
 					} else {
-						console.log('Error attaching stream to popup remoteVideo element.');
+						console.log('Error attaching stream to popup remoteAudio element.');
 					}
 
 					if (callPopupWindow) {
-						let remoteVideoPopup = callPopupWindow.document.getElementById("remoteVideo");
-						if (typeof remoteVideoPopup.srcObject !== 'undefined') {
-							remoteVideoPopup.srcObject = remoteStream;
-						} else if (typeof remoteVideoPopup.src !== 'undefined') {
-							remoteVideoPopup.src = window.URL.createObjectURL(remoteStream);
+						let remoteAudioPopup = callPopupWindow.document.getElementById("remoteAudio");
+						if (typeof remoteAudioPopup.srcObject !== 'undefined') {
+							remoteAudioPopup.srcObject = remoteStream;
+						} else if (typeof remoteAudioPopup.src !== 'undefined') {
+							remoteAudioPopup.src = window.URL.createObjectURL(remoteStream);
 						} else {
-							console.log('Error attaching stream to popup remoteVideo element.');
+							console.log('Error attaching stream to popup remoteAudio element.');
 						}
 					}
 
@@ -202,13 +217,13 @@ window.session = {
 					if (localStream) {
 						console.log('Received local stream from server in session.on("accepted")', localStream);
 						if (callPopupWindow) {
-							var localVideoPopup = callPopupWindow.document.getElementById("localVideo");
-							if (typeof localVideoPopup.srcObject !== 'undefined') {
-								localVideoPopup.srcObject = localStream;
-							} else if (typeof localVideoPopup.src !== 'undefined') {
-								localVideoPopup.src = window.URL.createObjectURL(localStream);
+							var localAudioPopup = callPopupWindow.document.getElementById("localAudio");
+							if (typeof localAudioPopup.srcObject !== 'undefined') {
+								localAudioPopup.srcObject = localStream;
+							} else if (typeof localAudioPopup.src !== 'undefined') {
+								localAudioPopup.src = window.URL.createObjectURL(localStream);
 							} else {
-								console.log('Error attaching stream to popup localVideo element.');
+								console.log('Error attaching stream to popup localAudio element.');
 							}
 						}
 					}
@@ -260,7 +275,7 @@ window.session = {
 		} else if (_session instanceof SIP.Invitation && _session.state === SIP.SessionState.Initial) {
 			let options = {
 				sessionDescriptionHandlerOptions: {
-					constraints: { audio: true, video: _state }
+					constraints: { audio: true, video: false }
 				}
 			};
 			try {
@@ -289,28 +304,50 @@ window.session = {
 			}
 		}
 	},
+
 	toggleHold: (_session, _state) => {
 		if (!_session) {
 			return;
 		}
+
 		if (_state == 'hold') {
-			_session.hold();
+			_session.invite({
+				sessionDescriptionHandlerModifiers: [_session.sessionDescriptionHandler.holdModifier]
+			});
 		} else {
-			_session.unhold();
+			_session.invite({
+				sessionDescriptionHandlerModifiers: []
+			});
 		}
 	},
 	toggleMute: (_session, _state) => {
-		if (!_session) {
-			return;
-		} else {
-			(_state == 'mute') ? _session.mute() : _session.unmute();
-		}
+
+		let peer = _session.sessionDescriptionHandler.peerConnection;
+		let senders = peer.getSenders();
+
+		if (!senders.length) return;
+
+		senders.forEach(function (sender) {
+			if (sender.track) sender.track.enabled = (_state !== 'mute');
+		});
 	},
+
 	sendDTMF: (_session, _dtmf) => {
+
 		if (!_session) {
 			return;
 		} else {
-			_session.dtmf(_dtmf);
+
+			const dtmf = _dtmf;
+			const duration = 2000;
+			const body = {
+				contentDisposition: "render",
+				contentType: "application/dtmf-relay",
+				content: "Signal=" + dtmf + "\r\nDuration=" + duration
+			};
+			const requestOptions = { body };
+
+			_session.info({ requestOptions });
 		}
 	},
 	blindTx: (_session, _blindTxTo) => {

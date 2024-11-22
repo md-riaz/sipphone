@@ -15,17 +15,14 @@ chrome.runtime.onMessage.addListener(
             _sessionId = request._sessionId;
             if (request.callDirection == 'incoming') {
                 $('.answerCallState').show();
-                $('.qbLocalvideo').hide();
                 $('.call_state_status').html('Incoming call from ' + displayName + ' (' + fromNumber + ')');
             } else if (request.callDirection == 'outgoing') {
                 $('.call_state_status').html('Dialing ' + displayName + ' (' + fromNumber + ')');
                 $('.answerCallState').hide();
-                $('.qbLocalvideo').show();
             }
             callAccepted = false;
         }
         if (request.action == "callAccepted") {
-            $('.qbLocalvideo').show();
             timer();
             onCallState();
             callAccepted = true;
@@ -113,15 +110,7 @@ $('#answerCallState').click(function() {
     $('.answerCallState').hide();
     $('.cancelCallState').hide();
 });
-$('#videoCallState').click(function() {
-    chrome.runtime.sendMessage({
-        action: "acceptCall",
-        _sessionId: _sessionId,
-        _video: true
-    });
-    $('.answerCallState').hide();
-    $('.cancelCallState').hide();
-});
+
 let openDialpad = () => {
     if ($('#dtmf_box').css('display') == 'none') {
         $('.call_state_status').css('display', 'none');
@@ -174,7 +163,7 @@ let hangupCall = (id) => {
 let holdCall = () => {
     chrome.runtime.sendMessage({
         action: "toggleHold",
-        state: 'hold',
+        _state: 'hold',
         _sessionId: _sessionId
     });
     $('#holdCall').css('display', 'none');
@@ -183,7 +172,7 @@ let holdCall = () => {
 let unholdCall = () => {
     chrome.runtime.sendMessage({
         action: "toggleHold",
-        state: 'unhold',
+        _state: 'unhold',
         _sessionId: _sessionId
     });
     $('#unholdCall').css('display', 'none');

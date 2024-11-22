@@ -46,12 +46,12 @@ b {
     outline: none;
 }
 
-.qb-video {
+.qb-audio {
     position: relative;
     padding: 0 0 75% 0; /* 4:3 */
     background: #bfbfbf;
 }
-.qb-video_source {
+.qb-audio_source {
     position: absolute;
     top: 0; bottom: 0;
     left: 0; right: 0;

@@ -31,20 +31,18 @@ let check_init_conf = () => {
 
 chrome.runtime.onMessage.addListener(function (request) {
     console.log(request);
-    if (request.action === 'save_call_assitant') {
+    if (request.action === 'save_call_assistant') {
         check_call_assistant();
     }
     if (request.action === 'call_status') {
-
-        console.log('cheking call status', { action: 'ua_status', status: getUAStatus() });
-        
+        console.log('checking call status', { action: 'ua_status', status: getUAStatus() });
         chrome.runtime.sendMessage({ action: 'ua_status', status: getUAStatus() });
     }
     if (request.action === 'doCall') {
-        phone.dial(request.ext_num, request.video);
+        phone.dial(request.ext_num);
     }
     if (request.action == 'acceptCall') {
-        phone.answer(request._sessionId, request._video);
+        phone.answer(request._sessionId);
     }
     if (request.action == 'hangup' || request.action == 'cancelCall') {
         phone.hangup(request._sessionId);
@@ -74,15 +72,14 @@ chrome.runtime.onMessage.addListener(function (request) {
 });
 
 let getUAStatus = () => {
-    
     try {
         if (registerer && registerer.state === SIP.RegistererState.Registered) {
             return 'registered';
         } else {
-            return 'unregisterd';
+            return 'unregistered';
         }
     } catch (e) {
-        return 'unregisterd';
+        return 'unregistered';
     }
 }
 

@@ -16,7 +16,6 @@ chrome.storage.sync.get(requiredKeys, function (_data) {
     }
 });
 
-
 let isNumberKey = (evt) => {
     let charCode = (evt.which) ? evt.which : event.keyCode;
     if (charCode > 31 && (charCode < 48 || charCode > 57))
@@ -42,7 +41,6 @@ $('#phone_number').keypress(function (evt) {
         return false;
     else
         return true;
-
 });
 
 function resetCallAssistantConfiguration() {
@@ -99,7 +97,7 @@ $('body').on('click', '.doCall', function (e) {
     let phone_number = $('#phone_number').val();
     if (!isEmpty(phone_number) && phone_number.length > 1) {
         if (checkOnlineUser()) {
-            chrome.runtime.sendMessage({ action: "doCall", ext_num: phone_number, video: $(this).attr('data-video') });
+            chrome.runtime.sendMessage({ action: "doCall", ext_num: phone_number });
             $('#phone_number').val('');
         } else {
             showDisplayErrorNotification('You are not registered.');
@@ -130,9 +128,7 @@ let showDisplayErrorNotification = (msg) => {
 
 chrome.runtime.onMessage.addListener(
     function (request, sender, sendResponse) {
-        
         if (request.action === "ua_status") {
-            
             if (request.status === "registered") {
                 $("#register").css('color', 'green');
                 $("#register").addClass('registered').removeClass('unregistered');
